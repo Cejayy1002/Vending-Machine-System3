@@ -1,63 +1,103 @@
-
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
+from admin import show_admin_panel
 
 products = {
     "Onion Rings": {
         "price": 11, "stock": 10,
-        "image": "images/oni.jpg"
+        "image": "images/oni.jpg",
+        "category": "Snacks"
     },
     "Potato Chips": {
         "price": 15, "stock": 10,
-        "image": "images/potato.jpg"
+        "image": "images/potato.jpg",
+        "category": "Snacks"
     },
     "Criss-Cross": {
         "price": 12, "stock": 10,
-        "image": "images/criss.jpg"
+        "image": "images/criss.jpg",
+        "category": "Snacks"
     },
     "Inihaw na Bangus": {
         "price": 13, "stock": 10,
-        "image": "images/bangus.jpg"
+        "image": "images/bangus.jpg",
+        "category": "Snacks"
     },
     "Martys": {
         "price": 10, "stock": 10,
-        "image": "images/martys.jpg"
+        "image": "images/martys.jpg",
+        "category": "Snacks"
     },
     "Mang Juan": {
         "price": 10, "stock": 10,
-        "image": "images/mang_juan.jpg"
-    }
-}
+        "image": "images/mang_juan.jpg",
+        "category": "Snacks"
+    },
 
-MAX_PAYMENT = 100
-total = 0
-selected_product = None
+    "Coca-Cola": {
+        "price": 20, "stock": 10,
+        "image": "images/coke.jpg",
+        "category": "Drinks"
+    },
+    "Water": {
+        "price": 15, "stock": 10,
+        "image": "images/water.jpg",
+        "category": "Drinks"
+    },
+    "C2": {
+        "price": 18, "stock": 10,
+        "image": "images/c2.jpg",
+        "category": "Drinks"
+    },
+    
+}
+current_category = "All Products"
+transactions = []
+MAX_PAYMENT = 500
+selected_product = []
 
 # Main window
 root = tk.Tk()
 root.title("Python Vending Machine")
 root.geometry("800x750")
-root.configure(bg="#000000")
-root.resizable(False, False)
+root.configure(bg="#3B3838")
+root.resizable(True,True)
+
 
 title = tk.Label(
     root,
     text="VENDING MACHINE",
     font=("Arial", 20, "bold"),
-    bg="#000000",
-    fg="#e62e00"
-)
-title.pack(pady=15)
+    bg="#3B3838",
+    fg="#00e676"
 
-balance_label = tk.Label(
-    root,
-    text="Total Sales: ₱0",
-    font=("Arial", 15, "bold"),
-    bg="#000000",
-    fg="white"
 )
-balance_label.pack(pady=5)
+def show_category(category):
+    global current_category
+    current_category = category
+    refresh_products()
+#nav bar
+nav_frame = tk.Frame(root, bg="#20242b")
+nav_frame.pack(fill="x", padx=10, pady=5)
+
+tk.Button(
+    nav_frame,
+    text="All Products",
+    command=lambda: show_category("All Products")
+).pack(side="left", padx=5)
+
+tk.Button(
+    nav_frame,
+    text="Snacks",
+    command=lambda: show_category("Snacks")
+).pack(side="left", padx=5)
+
+tk.Button(
+    nav_frame,
+    text="Beverages",
+    command=lambda: show_category("Beverages")
+).pack(side="left", padx=5)
 
 # Product display
 product_frame = tk.Frame(root, bg="#20242b")
@@ -84,7 +124,7 @@ def select_product(name):
 
     selected_product = name
     status_label.config(
-        text=f"{name} - ₱{item['price']} | Stock: {item['stock']}"
+        text=f"{name} - ₱{item['price']:.2f} | Stock: {item['stock']}"
     )
 
 
@@ -140,8 +180,17 @@ def buy_product():
     change = payment - item["price"]
     item["stock"] -= 1
     total += item["price"]
+    transactions.append({
+    "product": selected_product,
+    "price": item["price"],
+    "payment": payment,
+    "change": change,
+    "quantity": 1,
+    "time": __import__("datetime").datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+})
 
-    balance_label.config(text=f"Total Sales: ₱{total:.2f}")
 
     messagebox.showinfo(
         "Purchase Successful",
@@ -180,8 +229,8 @@ def refresh_products():
             text=f"{name}\n₱{item['price']}\n{stock_text}",
             image=photo,
             compound="top",
-            width=140,
-            height=160,
+            width=125,
+            height=150,
             font=("Arial", 10, "bold"),
             bg="#303640",
             fg="white",
@@ -203,7 +252,7 @@ def refresh_products():
 
 # Admin panel window
 
-def show_admin_panel():
+def show_admin_login():
     login_window = tk.Toplevel(root)
     login_window.title("Admin Login")
     login_window.geometry("300x250")
@@ -243,9 +292,20 @@ def show_admin_panel():
         password = password_entry.get()
 
         if username == "admin123" and password == "102007":
+            # Hide the login window first so the admin panel appears cleanly,
+            # then close it after the panel is created.
+            login_window.withdraw()
+            show_admin_panel(
+                root,
+                products,
+                transactions,
+                refresh_products,
+                lambda: total,
+                lambda: balance_label.config(
+                    text=f"Total Sales: ₱{total:.2f}"
+                )
+            )
             login_window.destroy()
-            show_admin_panel()
-
         else:
             messagebox.showerror(
                 "Login Failed",
@@ -267,7 +327,7 @@ payment_label = tk.Label(
     root,
     text="Enter Payment (₱):",
     font=("Arial", 11),
-    bg="#000000",
+    bg="#3B3838",
     fg="white"
 )
 payment_label.pack(pady=(10, 5))
@@ -293,12 +353,12 @@ buy_button.pack(pady=10)
 # Admin button
 admin_button = tk.Button(
     root,
-    text="ADMIN CONTROLS",
+    text="ADMINISTRATOR PANEL",
     font=("Arial", 11, "bold"),
     bg="#303640",
     fg="white",
     width=20,
-    command=show_admin_panel
+    command=show_admin_login
 )
 admin_button.pack(pady=5)
 
