@@ -1,114 +1,84 @@
+
 import tkinter as tk
+import admin
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from admin import show_admin_panel
+
 
 products = {
     "Onion Rings": {
         "price": 11, "stock": 10,
-        "image": "images/oni.jpg",
-        "category": "Snacks"
+        "image": "images/oni.jpg"
     },
     "Potato Chips": {
         "price": 15, "stock": 10,
-        "image": "images/potato.jpg",
-        "category": "Snacks"
+        "image": "images/potato.jpg"
     },
     "Criss-Cross": {
         "price": 12, "stock": 10,
-        "image": "images/criss.jpg",
-        "category": "Snacks"
+        "image": "images/criss.jpg"
     },
     "Inihaw na Bangus": {
         "price": 13, "stock": 10,
-        "image": "images/bangus.jpg",
-        "category": "Snacks"
+        "image": "images/bangus.jpg"
     },
     "Martys": {
         "price": 10, "stock": 10,
-        "image": "images/martys.jpg",
-        "category": "Snacks"
+        "image": "images/martys.jpg"
     },
     "Mang Juan": {
         "price": 10, "stock": 10,
-        "image": "images/mang_juan.jpg",
-        "category": "Snacks"
-    },
-
-    "Coca-Cola": {
-        "price": 20, "stock": 10,
-        "image": "images/coke.jpg",
-        "category": "Drinks"
-    },
-    "Water": {
-        "price": 15, "stock": 10,
-        "image": "images/water.jpg",
-        "category": "Drinks"
-    },
-    "C2": {
-        "price": 18, "stock": 10,
-        "image": "images/c2.jpg",
-        "category": "Drinks"
-    },
-    
+        "image": "images/mang_juan.jpg"
+    }
 }
-current_category = "All Products"
-transactions = []
-MAX_PAYMENT = 500
-selected_product = []
+
+MAX_PAYMENT = 100
+total = 0
+selected_product = None
+
+# Color palette
+BG_COLOR = "#E8EDF4"
+CARD_COLOR = "#F1F4F8"
+PRIMARY_COLOR = "#426A9E"
+HIGHLIGHT_COLOR = "#83A9D1"
+TEXT_COLOR = "#34445A"
+WHITE = "#FFFFFF"
 
 # Main window
 root = tk.Tk()
 root.title("Python Vending Machine")
-root.geometry("800x750")
-root.configure(bg="#3B3838")
-root.resizable(True,True)
-
+root.geometry("800x720")
+root.configure(bg=BG_COLOR)
+root.resizable(True, True)
 
 title = tk.Label(
     root,
     text="VENDING MACHINE",
     font=("Arial", 20, "bold"),
-    bg="#3B3838",
-    fg="#00e676"
-
+    bg=BG_COLOR,
+    fg=TEXT_COLOR
 )
-def show_category(category):
-    global current_category
-    current_category = category
-    refresh_products()
-#nav bar
-nav_frame = tk.Frame(root, bg="#20242b")
-nav_frame.pack(fill="x", padx=10, pady=5)
+title.pack(pady=15)
 
-tk.Button(
-    nav_frame,
-    text="All Products",
-    command=lambda: show_category("All Products")
-).pack(side="left", padx=5)
-
-tk.Button(
-    nav_frame,
-    text="Snacks",
-    command=lambda: show_category("Snacks")
-).pack(side="left", padx=5)
-
-tk.Button(
-    nav_frame,
-    text="Beverages",
-    command=lambda: show_category("Beverages")
-).pack(side="left", padx=5)
+balance_label = tk.Label(
+    root,
+    text="Total Sales: ₱0",
+    font=("Arial", 15, "bold"),
+    bg=CARD_COLOR,
+    fg=TEXT_COLOR
+)
+balance_label.pack(pady=5, ipadx=12, ipady=5)
 
 # Product display
-product_frame = tk.Frame(root, bg="#20242b")
+product_frame = tk.Frame(root, bg=BG_COLOR)
 product_frame.pack(pady=10)
 
 status_label = tk.Label(
     root,
     text="Select a product",
     font=("Arial", 11),
-    bg="#20242b",
-    fg="white"
+    bg=BG_COLOR,
+    fg=TEXT_COLOR
 )
 status_label.pack(pady=5)
 
@@ -124,7 +94,7 @@ def select_product(name):
 
     selected_product = name
     status_label.config(
-        text=f"{name} - ₱{item['price']:.2f} | Stock: {item['stock']}"
+        text=f"{name} - ₱{item['price']} | Stock: {item['stock']}"
     )
 
 
@@ -180,17 +150,8 @@ def buy_product():
     change = payment - item["price"]
     item["stock"] -= 1
     total += item["price"]
-    transactions.append({
-    "product": selected_product,
-    "price": item["price"],
-    "payment": payment,
-    "change": change,
-    "quantity": 1,
-    "time": __import__("datetime").datetime.now().strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-})
 
+    balance_label.config(text=f"Total Sales: ₱{total:.2f}")
 
     messagebox.showinfo(
         "Purchase Successful",
@@ -229,12 +190,14 @@ def refresh_products():
             text=f"{name}\n₱{item['price']}\n{stock_text}",
             image=photo,
             compound="top",
-            width=125,
-            height=150,
+            width=140,
+            height=160,
             font=("Arial", 10, "bold"),
-            bg="#303640",
-            fg="white",
-            activebackground="#00c853",
+            bg=CARD_COLOR,
+            fg=TEXT_COLOR,
+            activebackground=HIGHLIGHT_COLOR,
+            activeforeground=WHITE,
+            relief="flat",
             command=lambda n=name: select_product(n),
             state="normal" if item["stock"] > 0 else "disabled"
         )
@@ -252,39 +215,48 @@ def refresh_products():
 
 # Admin panel window
 
-def show_admin_login():
+def show_admin_panel():
     login_window = tk.Toplevel(root)
     login_window.title("Admin Login")
     login_window.geometry("300x250")
-    login_window.configure(bg="#20242b")
+    login_window.configure(bg=BG_COLOR)
     login_window.resizable(False, False)
 
     tk.Label(
         login_window,
         text="ADMIN LOGIN",
         font=("Arial", 18, "bold"),
-        bg="#20242b",
-        fg="#00e676"
+        bg=BG_COLOR,
+        fg=PRIMARY_COLOR
     ).pack(pady=15)
 
     tk.Label(
         login_window,
         text="Username:",
-        bg="#20242b",
-        fg="white"
+        bg=BG_COLOR,
+        fg=TEXT_COLOR
     ).pack()
 
-    username_entry = tk.Entry(login_window)
+    username_entry = tk.Entry(
+        login_window,
+        bg=CARD_COLOR,
+        fg=TEXT_COLOR
+    )
     username_entry.pack(pady=5)
 
     tk.Label(
         login_window,
         text="Password:",
-        bg="#20242b",
-        fg="white"
+        bg=BG_COLOR,
+        fg=TEXT_COLOR
     ).pack()
 
-    password_entry = tk.Entry(login_window, show="*")
+    password_entry = tk.Entry(
+        login_window,
+        show="*",
+        bg=CARD_COLOR,
+        fg=TEXT_COLOR
+    )
     password_entry.pack(pady=5)
 
     def login():
@@ -292,20 +264,10 @@ def show_admin_login():
         password = password_entry.get()
 
         if username == "admin123" and password == "102007":
-            # Hide the login window first so the admin panel appears cleanly,
-            # then close it after the panel is created.
-            login_window.withdraw()
-            show_admin_panel(
-                root,
-                products,
-                transactions,
-                refresh_products,
-                lambda: total,
-                lambda: balance_label.config(
-                    text=f"Total Sales: ₱{total:.2f}"
-                )
-            )
             login_window.destroy()
+            admin.show_admin_panel(root)
+            
+
         else:
             messagebox.showerror(
                 "Login Failed",
@@ -316,9 +278,12 @@ def show_admin_login():
         login_window,
         text="LOGIN",
         command=login,
-        bg="#00c853",
-        fg="white",
-        width=15
+        bg=PRIMARY_COLOR,
+        fg=WHITE,
+        activebackground=HIGHLIGHT_COLOR,
+        activeforeground=WHITE,
+        width=15,
+        relief="flat"
     ).pack(pady=15)
 
 
@@ -327,15 +292,17 @@ payment_label = tk.Label(
     root,
     text="Enter Payment (₱):",
     font=("Arial", 11),
-    bg="#3B3838",
-    fg="white"
+    bg=BG_COLOR,
+    fg=TEXT_COLOR
 )
 payment_label.pack(pady=(10, 5))
 
 payment_entry = tk.Entry(
     root,
     font=("Arial", 14),
-    justify="center"
+    justify="center",
+    bg=CARD_COLOR,
+    fg=TEXT_COLOR
 )
 payment_entry.pack(pady=5)
 
@@ -343,9 +310,12 @@ buy_button = tk.Button(
     root,
     text="BUY NOW",
     font=("Arial", 13, "bold"),
-    bg="#00c853",
-    fg="white",
+    bg=PRIMARY_COLOR,
+    fg=WHITE,
+    activebackground=HIGHLIGHT_COLOR,
+    activeforeground=WHITE,
     width=20,
+    relief="flat",
     command=buy_product
 )
 buy_button.pack(pady=10)
@@ -353,12 +323,15 @@ buy_button.pack(pady=10)
 # Admin button
 admin_button = tk.Button(
     root,
-    text="ADMINISTRATOR PANEL",
+    text="ADMIN CONTROLS",
     font=("Arial", 11, "bold"),
-    bg="#303640",
-    fg="white",
+    bg=TEXT_COLOR,
+    fg=WHITE,
+    activebackground=PRIMARY_COLOR,
+    activeforeground=WHITE,
     width=20,
-    command=show_admin_login
+    relief="flat",
+    command=show_admin_panel
 )
 admin_button.pack(pady=5)
 
