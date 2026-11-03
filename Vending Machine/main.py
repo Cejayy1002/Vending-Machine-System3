@@ -3,36 +3,40 @@ import tkinter as tk
 import admin
 from tkinter import messagebox
 from PIL import Image, ImageTk
+import admin
+from datetime import datetime
+
+transaction_history = []
 
 
 products = {
     "Onion Rings": {
-        "price": 11, "stock": 10,
+        "price": 11, "stock": 50,
         "image": "images/oni.jpg"
     },
     "Potato Chips": {
-        "price": 15, "stock": 10,
+        "price": 15, "stock": 50,
         "image": "images/potato.jpg"
     },
     "Criss-Cross": {
-        "price": 12, "stock": 10,
+        "price": 12, "stock": 50,
         "image": "images/criss.jpg"
     },
     "Inihaw na Bangus": {
-        "price": 13, "stock": 10,
+        "price": 13, "stock": 50,
         "image": "images/bangus.jpg"
     },
     "Martys": {
-        "price": 10, "stock": 10,
+        "price": 10, "stock": 50,
         "image": "images/martys.jpg"
     },
     "Mang Juan": {
-        "price": 10, "stock": 10,
+        "price": 10, "stock": 50,
         "image": "images/mang_juan.jpg"
     }
 }
 
-MAX_PAYMENT = 100
+MAX_PAYMENT = 500
 total = 0
 selected_product = None
 
@@ -51,6 +55,8 @@ root.geometry("800x720")
 root.configure(bg=BG_COLOR)
 root.resizable(True, True)
 
+
+
 title = tk.Label(
     root,
     text="VENDING MACHINE",
@@ -60,14 +66,6 @@ title = tk.Label(
 )
 title.pack(pady=15)
 
-balance_label = tk.Label(
-    root,
-    text="Total Sales: ₱0",
-    font=("Arial", 15, "bold"),
-    bg=CARD_COLOR,
-    fg=TEXT_COLOR
-)
-balance_label.pack(pady=5, ipadx=12, ipady=5)
 
 # Product display
 product_frame = tk.Frame(root, bg=BG_COLOR)
@@ -136,7 +134,7 @@ def buy_product():
     if payment > MAX_PAYMENT:
         messagebox.showerror(
             "Exceeded Payment Limit",
-            f"Maximum payment allowed is ₱{MAX_PAYMENT}."
+            f"Machine doesnt have enough balance for change."
         )
         return
 
@@ -150,8 +148,17 @@ def buy_product():
     change = payment - item["price"]
     item["stock"] -= 1
     total += item["price"]
+    transaction_history.append({
+        "id": len(transaction_history) + 1,
+        "date_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "products": selected_product,
+        "quantity": 1,
+        "total": item["price"],
+        "amount_paid": payment,
+        "change": change
+    })
 
-    balance_label.config(text=f"Total Sales: ₱{total:.2f}")
+
 
     messagebox.showinfo(
         "Purchase Successful",
@@ -160,6 +167,7 @@ def buy_product():
         f"Payment: ₱{payment:.2f}\n"
         f"Change: ₱{change:.2f}"
     )
+
 
     payment_entry.delete(0, tk.END)
     selected_product = None
@@ -265,7 +273,7 @@ def show_admin_panel():
 
         if username == "admin123" and password == "102007":
             login_window.destroy()
-            admin.show_admin_panel(root)
+            admin.show_admin_panel(root, transaction_history)
             
 
         else:
