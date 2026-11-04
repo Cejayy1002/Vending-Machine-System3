@@ -1,10 +1,11 @@
-
 import tkinter as tk
 import admin
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import admin
 from datetime import datetime
+import math
+from pathlib import Path
 
 transaction_history = []
 
@@ -36,16 +37,19 @@ products = {
     }
 }
 
-MAX_PAYMENT = 500
+MAX_CHANGE = 500
 total = 0
 selected_product = None
 
 # Color palette
-BG_COLOR = "#E8EDF4"
-CARD_COLOR = "#F1F4F8"
-PRIMARY_COLOR = "#426A9E"
-HIGHLIGHT_COLOR = "#83A9D1"
-TEXT_COLOR = "#34445A"
+BG_COLOR = "#000000"
+CARD_COLOR = "#1A1A1A"
+PRIMARY_COLOR = "#E50920"
+SECONDARY_COLOR = "#8B0015"
+HIGHLIGHT_COLOR = "#8B0015"
+TEXT_COLOR = "#FFFFFF"
+SECONDARY_TEXT_COLOR = "#B3B3B3"
+BORDER_COLOR = "#333333"
 WHITE = "#FFFFFF"
 
 # Main window
@@ -55,16 +59,31 @@ root.geometry("800x720")
 root.configure(bg=BG_COLOR)
 root.resizable(True, True)
 
+root.total_sales = 0
+root.starting_current_money = 500
+root.available_change = MAX_CHANGE
 
+
+header_frame = tk.Frame(root, bg=BG_COLOR)
+header_frame.pack(pady=10)
+
+logo_image = Image.open(
+    Path(__file__).resolve().parent.parent / "images" / "logo.jpg"
+)
+logo_image = logo_image.resize((120, 90))
+logo_photo = ImageTk.PhotoImage(logo_image)
+logo_label = tk.Label(header_frame, image=logo_photo, bg=BG_COLOR)
+logo_label.image = logo_photo
+logo_label.pack(side="left", padx=(0, 12))
 
 title = tk.Label(
-    root,
+    header_frame,
     text="VENDING MACHINE",
     font=("Arial", 20, "bold"),
     bg=BG_COLOR,
     fg=TEXT_COLOR
 )
-title.pack(pady=15)
+title.pack(side="left")
 
 
 # Product display
@@ -124,17 +143,17 @@ def buy_product():
         )
         return
 
+    if not math.isfinite(payment):
+        messagebox.showerror(
+            "Invalid Payment",
+            "Please enter a valid amount."
+        )
+        return
+
     if payment < 0:
         messagebox.showerror(
             "Invalid Payment",
             "Payment cannot be negative."
-        )
-        return
-
-    if payment > MAX_PAYMENT:
-        messagebox.showerror(
-            "Exceeded Payment Limit",
-            f"Machine doesnt have enough balance for change."
         )
         return
 
@@ -146,8 +165,18 @@ def buy_product():
         return
 
     change = payment - item["price"]
+    if change > root.available_change:
+        messagebox.showwarning(
+            "Insufficient Change",
+            f"The machine can only provide ₱{root.available_change:.2f} in change."
+        )
+        return
+
     item["stock"] -= 1
     total += item["price"]
+    root.total_sales += item["price"]
+    root.starting_current_money += item["price"]
+    root.available_change -= change
     transaction_history.append({
         "id": len(transaction_history) + 1,
         "date_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -203,9 +232,13 @@ def refresh_products():
             font=("Arial", 10, "bold"),
             bg=CARD_COLOR,
             fg=TEXT_COLOR,
-            activebackground=HIGHLIGHT_COLOR,
+            activebackground=PRIMARY_COLOR,
             activeforeground=WHITE,
             relief="flat",
+            bd=0,
+            highlightthickness=1,
+            highlightbackground=BORDER_COLOR,
+            highlightcolor=PRIMARY_COLOR,
             command=lambda n=name: select_product(n),
             state="normal" if item["stock"] > 0 else "disabled"
         )
@@ -242,13 +275,17 @@ def show_admin_panel():
         login_window,
         text="Username:",
         bg=BG_COLOR,
-        fg=TEXT_COLOR
+        fg=SECONDARY_TEXT_COLOR
     ).pack()
 
     username_entry = tk.Entry(
         login_window,
         bg=CARD_COLOR,
-        fg=TEXT_COLOR
+        fg=TEXT_COLOR,
+        insertbackground=TEXT_COLOR,
+        highlightthickness=1,
+        highlightbackground=BORDER_COLOR,
+        highlightcolor=PRIMARY_COLOR
     )
     username_entry.pack(pady=5)
 
@@ -256,14 +293,18 @@ def show_admin_panel():
         login_window,
         text="Password:",
         bg=BG_COLOR,
-        fg=TEXT_COLOR
+        fg=SECONDARY_TEXT_COLOR
     ).pack()
 
     password_entry = tk.Entry(
         login_window,
         show="*",
         bg=CARD_COLOR,
-        fg=TEXT_COLOR
+        fg=TEXT_COLOR,
+        insertbackground=TEXT_COLOR,
+        highlightthickness=1,
+        highlightbackground=BORDER_COLOR,
+        highlightcolor=PRIMARY_COLOR
     )
     password_entry.pack(pady=5)
 
@@ -288,10 +329,11 @@ def show_admin_panel():
         command=login,
         bg=PRIMARY_COLOR,
         fg=WHITE,
-        activebackground=HIGHLIGHT_COLOR,
+        activebackground=SECONDARY_COLOR,
         activeforeground=WHITE,
         width=15,
-        relief="flat"
+        relief="flat",
+        bd=0
     ).pack(pady=15)
 
 
@@ -310,7 +352,11 @@ payment_entry = tk.Entry(
     font=("Arial", 14),
     justify="center",
     bg=CARD_COLOR,
-    fg=TEXT_COLOR
+    fg=TEXT_COLOR,
+    insertbackground=TEXT_COLOR,
+    highlightthickness=1,
+    highlightbackground=BORDER_COLOR,
+    highlightcolor=PRIMARY_COLOR
 )
 payment_entry.pack(pady=5)
 
@@ -320,10 +366,11 @@ buy_button = tk.Button(
     font=("Arial", 13, "bold"),
     bg=PRIMARY_COLOR,
     fg=WHITE,
-    activebackground=HIGHLIGHT_COLOR,
+    activebackground=SECONDARY_COLOR,
     activeforeground=WHITE,
     width=20,
     relief="flat",
+    bd=0,
     command=buy_product
 )
 buy_button.pack(pady=10)
@@ -333,12 +380,13 @@ admin_button = tk.Button(
     root,
     text="ADMIN CONTROLS",
     font=("Arial", 11, "bold"),
-    bg=TEXT_COLOR,
+    bg=PRIMARY_COLOR,
     fg=WHITE,
-    activebackground=PRIMARY_COLOR,
+    activebackground=SECONDARY_COLOR,
     activeforeground=WHITE,
     width=20,
     relief="flat",
+    bd=0,
     command=show_admin_panel
 )
 admin_button.pack(pady=5)
