@@ -1,39 +1,59 @@
 import tkinter as tk
-import admin
 from tkinter import messagebox
 from PIL import Image, ImageTk
-import admin
 from datetime import datetime
 import math
 from pathlib import Path
 
+import admin
+
 transaction_history = []
 
-
 products = {
-    "Onion Rings": {
-        "price": 11, "stock": 50,
-        "image": "images/oni.jpg"
+    "Piattos": {
+        "price": 20,
+        "stock": 50,
+        "image": "images/piattos.jpg"
     },
-    "Potato Chips": {
-        "price": 15, "stock": 50,
-        "image": "images/potato.jpg"
+    "Nova": {
+        "price": 20,
+        "stock": 50,
+        "image": "images/nova.jpg"
     },
-    "Criss-Cross": {
-        "price": 12, "stock": 50,
-        "image": "images/criss.jpg"
+    "Pillows": {
+        "price": 12,
+        "stock": 50,
+        "image": "images/pillows.jpg"
     },
-    "Inihaw na Bangus": {
-        "price": 13, "stock": 50,
-        "image": "images/bangus.jpg"
+    "Fita": {
+        "price": 10,
+        "stock": 50,
+        "image": "images/Fita.jpg"
     },
-    "Martys": {
-        "price": 10, "stock": 50,
-        "image": "images/martys.jpg"
+    "Rebisco": {
+        "price": 10,
+        "stock": 50,
+        "image": "images/rebi.jpg"
     },
-    "Mang Juan": {
-        "price": 10, "stock": 50,
-        "image": "images/mang_juan.jpg"
+    "Clover": {
+        "price": 12,
+        "stock": 50,
+        "image": "images/clover.jpg"
+    },
+    "C2 Apple": {
+        "price": 20,
+        "stock": 50,
+        "image": "images/c2.jpg"
+    },
+    "Chuckie": {
+        "price": 15,
+        "stock": 50,
+        "image": "images/chuckie.jpg"
+    },
+    "Water": {
+        "price": 15,
+        "stock": 50,
+        "image": "images/water.jpg"
     }
 }
 
@@ -63,7 +83,6 @@ root.total_sales = 0
 root.starting_current_money = 500
 root.available_change = MAX_CHANGE
 
-
 header_frame = tk.Frame(root, bg=BG_COLOR)
 header_frame.pack(pady=10)
 
@@ -84,7 +103,6 @@ title = tk.Label(
     fg=TEXT_COLOR
 )
 title.pack(side="left")
-
 
 # Product display
 product_frame = tk.Frame(root, bg=BG_COLOR)
@@ -187,8 +205,6 @@ def buy_product():
         "change": change
     })
 
-
-
     messagebox.showinfo(
         "Purchase Successful",
         f"Product: {selected_product}\n"
@@ -196,7 +212,6 @@ def buy_product():
         f"Payment: ₱{payment:.2f}\n"
         f"Change: ₱{change:.2f}"
     )
-
 
     payment_entry.delete(0, tk.END)
     selected_product = None
@@ -217,7 +232,7 @@ def refresh_products():
 
         try:
             image = Image.open(item["image"])
-            image = image.resize((100, 100))
+            image = image.resize((70, 70))
             photo = ImageTk.PhotoImage(image)
         except (FileNotFoundError, OSError):
             photo = None
@@ -227,8 +242,8 @@ def refresh_products():
             text=f"{name}\n₱{item['price']}\n{stock_text}",
             image=photo,
             compound="top",
-            width=140,
-            height=160,
+            width=120,
+            height=130,
             font=("Arial", 10, "bold"),
             bg=CARD_COLOR,
             fg=TEXT_COLOR,
@@ -243,9 +258,7 @@ def refresh_products():
             state="normal" if item["stock"] > 0 else "disabled"
         )
 
-        # Keep the image reference
         button.image = photo
-
         button.grid(
             row=index // 3,
             column=index % 3,
@@ -253,8 +266,6 @@ def refresh_products():
             pady=5
         )
 
-
-# Admin panel window
 
 def show_admin_panel():
     login_window = tk.Toplevel(root)
@@ -314,9 +325,12 @@ def show_admin_panel():
 
         if username == "admin123" and password == "102007":
             login_window.destroy()
-            admin.show_admin_panel(root, transaction_history)
-            
-
+            admin.show_admin_panel(
+                root,
+                transaction_history,
+                products,
+                refresh_products
+            )
         else:
             messagebox.showerror(
                 "Login Failed",

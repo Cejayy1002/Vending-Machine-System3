@@ -3,7 +3,10 @@ from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
 import math
 
-def show_admin_panel(parent, transaction_history):
+def show_admin_panel(parent, transaction_history, products=None, refresh_products=None):
+
+    if products is None:
+        products = {}
 
     admin = tk.Toplevel(parent)
     admin.title("Vending Machine - Admin Panel")
@@ -85,6 +88,155 @@ def show_admin_panel(parent, transaction_history):
     history_tab = tk.Frame(notebook, bg=BG_COLOR)
 
     notebook.add(history_tab, text="Transaction History")
+
+    product_tab = tk.Frame(notebook, bg=BG_COLOR)
+    notebook.add(product_tab, text="Product Management")
+
+    product_table = ttk.Treeview(
+        product_tab,
+        columns=("Product Name", "Price", "Stock"),
+        show="headings",
+        style="RedRoses.Treeview"
+    )
+    product_table.heading("Product Name", text="Product Name")
+    product_table.heading("Price", text="Price")
+    product_table.heading("Stock", text="Stock")
+    product_table.column("Product Name", width=220, anchor="center")
+    product_table.column("Price", width=140, anchor="center")
+    product_table.column("Stock", width=120, anchor="center")
+    product_table.pack(fill="both", expand=True, padx=15, pady=(15, 10))
+
+    def refresh_product_table():
+        for row in product_table.get_children():
+            product_table.delete(row)
+
+        for name, item in products.items():
+            product_table.insert("", "end", values=(
+                name,
+                f"₱{item['price']:.2f}",
+                item["stock"]
+            ))
+
+    def selected_product_name():
+        selected = product_table.selection()
+        if not selected:
+            messagebox.showwarning(
+                "No Product Selected",
+                "Please select a product first.",
+                parent=admin
+            )
+            return None
+        return product_table.item(selected[0], "values")[0]
+
+    def add_stock():
+        name = selected_product_name()
+        if name is None:
+            return
+
+        quantity = simpledialog.askinteger(
+            "Add Stock",
+            f"How many units of {name} do you want to add?",
+            parent=admin,
+            minvalue=1
+        )
+
+        if quantity is None:
+            return
+
+        if quantity <= 0:
+            messagebox.showerror(
+                "Invalid Quantity",
+                "Stock quantity must be greater than zero.",
+                parent=admin
+            )
+            return
+
+        products[name]["stock"] += quantity
+        refresh_product_table()
+
+        if refresh_products is not None:
+            refresh_products()
+
+        messagebox.showinfo(
+            "Stock Updated",
+            f"{quantity} item(s) were added to {name}.",
+            parent=admin
+        )
+
+    def edit_price():
+        name = selected_product_name()
+        if name is None:
+            return
+
+        new_price = simpledialog.askfloat(
+            "Edit Price",
+            f"Enter a new price for {name}:",
+            parent=admin,
+            minvalue=0.01
+        )
+
+        if new_price is None:
+            return
+
+        if not math.isfinite(new_price):
+            messagebox.showerror(
+                "Invalid Price",
+                "Please enter a valid price.",
+                parent=admin
+            )
+            return
+
+        if new_price <= 0:
+            messagebox.showerror(
+                "Invalid Price",
+                "Price must be greater than zero.",
+                parent=admin
+            )
+            return
+
+        products[name]["price"] = round(new_price, 2)
+        refresh_product_table()
+
+        if refresh_products is not None:
+            refresh_products()
+
+        messagebox.showinfo(
+            "Price Updated",
+            f"The price of {name} was changed to ₱{new_price:.2f}.",
+            parent=admin
+        )
+
+    button_frame = tk.Frame(product_tab, bg=BG_COLOR)
+    button_frame.pack(pady=(0, 15))
+
+    tk.Button(
+        button_frame,
+        text="Add Stock",
+        command=add_stock,
+        bg=PRIMARY_COLOR,
+        fg=TEXT_COLOR,
+        activebackground=SECONDARY_COLOR,
+        activeforeground=TEXT_COLOR,
+        relief="flat",
+        bd=0,
+        width=15
+    ).pack(side="left", padx=(0, 10))
+
+    tk.Button(
+        button_frame,
+        text="Edit Price",
+        command=edit_price,
+        bg=PRIMARY_COLOR,
+        fg=TEXT_COLOR,
+        activebackground=SECONDARY_COLOR,
+        activeforeground=TEXT_COLOR,
+        relief="flat",
+        bd=0,
+        width=15
+    ).pack(side="left")
+
+    refresh_product_table()
+
     # =================================
     # TRANSACTION HISTORY
     # =================================
