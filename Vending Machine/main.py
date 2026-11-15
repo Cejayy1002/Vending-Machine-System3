@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from datetime import datetime
 import math
+import sqlite3
 from pathlib import Path
 
 import admin
+import database
 
 transaction_history = []
 
@@ -83,6 +84,24 @@ root.total_sales = 0
 root.starting_current_money = 500
 root.available_change = MAX_CHANGE
 
+try:
+    database.initialize_database(products)
+    products.clear()
+    products.update(database.get_products())
+    transaction_history.extend(database.get_transaction_history())
+    machine_state = database.get_machine_state()
+    root.total_sales = machine_state["total_sales"]
+    root.starting_current_money = machine_state["cash_balance"]
+    root.available_change = machine_state["available_change"]
+except sqlite3.Error as error:
+    messagebox.showerror(
+        "Database Error",
+        f"The vending machine database could not be opened:\n{error}",
+        parent=root
+    )
+    root.destroy()
+    raise
+
 header_frame = tk.Frame(root, bg=BG_COLOR)
 header_frame.pack(pady=10)
 
@@ -123,6 +142,10 @@ def select_product(name):
 
     item = products[name]
 
+    if item.get("archived", False):
+        status_label.config(text=f"{name} is unavailable.")
+        return
+
     if item["stock"] <= 0:
         status_label.config(text=f"{name} is out of stock!")
         return
@@ -144,6 +167,15 @@ def buy_product():
         return
 
     item = products[selected_product]
+
+    if item.get("archived", False):
+        messagebox.showerror(
+            "Unavailable Product",
+            "This product is unavailable."
+        )
+        selected_product = None
+        refresh_products()
+        return
 
     if item["stock"] <= 0:
         messagebox.showerror(
@@ -190,27 +222,58 @@ def buy_product():
         )
         return
 
-    item["stock"] -= 1
-    total += item["price"]
-    root.total_sales += item["price"]
-    root.starting_current_money += item["price"]
-    root.available_change -= change
-    transaction_history.append({
-        "id": len(transaction_history) + 1,
-        "date_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "products": selected_product,
-        "quantity": 1,
-        "total": item["price"],
-        "amount_paid": payment,
-        "change": change
-    })
+    try:
+        purchase = database.complete_sale(selected_product, payment)
+    except ValueError as error:
+        messagebox.showwarning("Purchase Unavailable", str(error))
+        try:
+            stored_products = database.get_products()
+        except sqlite3.Error as database_error:
+            messagebox.showerror(
+                "Database Error",
+                f"Could not refresh product stock:\n{database_error}"
+            )
+            return
+        products.clear()
+        products.update(stored_products)
+        refresh_products()
+        return
+    except sqlite3.Error as error:
+        messagebox.showerror(
+            "Database Error",
+            f"The purchase could not be saved:\n{error}"
+        )
+        return
+
+    try:
+        stored_products = database.get_products()
+        stored_transactions = database.get_transaction_history()
+        machine_state = database.get_machine_state()
+    except sqlite3.Error as error:
+        messagebox.showerror(
+            "Database Error",
+            "The purchase was saved, but the latest machine data could not "
+            f"be loaded:\n{error}\nPlease restart the application before "
+            "making another purchase."
+        )
+        payment_entry.delete(0, tk.END)
+        selected_product = None
+        return
+
+    products.clear()
+    products.update(stored_products)
+    transaction_history[:] = stored_transactions
+    root.total_sales = machine_state["total_sales"]
+    root.starting_current_money = machine_state["cash_balance"]
+    root.available_change = machine_state["available_change"]
+    total += purchase["total"]
 
     messagebox.showinfo(
         "Purchase Successful",
-        f"Product: {selected_product}\n"
-        f"Price: ₱{item['price']:.2f}\n"
-        f"Payment: ₱{payment:.2f}\n"
-        f"Change: ₱{change:.2f}"
+        f"Product: {purchase['product']}\n"
+        f"Price: ₱{purchase['total']:.2f}\n"
+        f"Payment: ₱{purchase['payment']:.2f}\n"
+        f"Change: ₱{purchase['change']:.2f}"
     )
 
     payment_entry.delete(0, tk.END)
@@ -223,7 +286,11 @@ def refresh_products():
     for widget in product_frame.winfo_children():
         widget.destroy()
 
-    for index, (name, item) in enumerate(products.items()):
+    visible_index = 0
+    for name, item in products.items():
+        if item.get("archived", False):
+            continue
+
         stock_text = (
             f"Stock: {item['stock']}"
             if item["stock"] > 0
@@ -260,11 +327,12 @@ def refresh_products():
 
         button.image = photo
         button.grid(
-            row=index // 3,
-            column=index % 3,
+            row=visible_index // 4,
+            column=visible_index % 4,
             padx=5,
             pady=5
         )
+        visible_index += 1
 
 
 def show_admin_panel():
